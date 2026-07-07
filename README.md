@@ -2,14 +2,49 @@
 
 FastAPI + React app for uploading PDFs, extracting page-aware chunks, embedding them with Google Gemini `gemini-embedding-2`, storing vectors in Supabase pgvector, and chatting with grounded source references.
 
-## Stack
+### 🌐 Live Demo
+* **Frontend:** [https://vishalpr013.github.io/DocuMind/](https://vishalpr013.github.io/DocuMind/)
+* **Backend API:** [https://documind-backend-jvml.onrender.com/health](https://documind-backend-jvml.onrender.com/health)
 
-- Backend: FastAPI
-- PDF extraction: pdfplumber, with PyPDF fallback metadata support
-- Chunking: recursive character chunker with page numbers tracked per chunk
-- Embeddings: Google Gemini `gemini-embedding-2` (truncated to 768 dimensions)
-- Vector DB: Supabase Postgres with pgvector
-- Frontend: React + Tailwind CSS v4 + Vite
+---
+
+## 🛠️ Stack
+
+- **Backend:** FastAPI (Python)
+- **PDF Extraction:** `pdfplumber` (highly accurate text extraction, with PyPDF fallback)
+- **Chunking:** Custom recursive character chunker preserving page-number boundaries per chunk
+- **Embeddings:** Google Gemini `gemini-embedding-2` (truncated to 768 dimensions)
+- **Vector Database:** Supabase Postgres with `pgvector` extension
+- **Frontend:** React + Tailwind CSS v4 + Vite
+
+---
+
+## 🧠 How Chunking & Retrieval Works
+
+### 1. Document Parsing & Text Extraction
+When a PDF is uploaded via `/documents/upload`, the backend uses `pdfplumber` to extract text page-by-page. By extracting text at the page level rather than the whole document, the application preserves the metadata mapping each text block to its specific page number.
+
+### 2. Page-Aware Chunking
+The extracted pages are processed by a custom `RecursiveCharacterChunker`:
+* **Chunk Size:** 1200 characters.
+* **Chunk Overlap:** 180 characters.
+* **Page-Awareness:** Chunks are created sequentially. If a chunk spans across multiple pages, the chunk keeps track of the `page_start` and `page_end` so that the user receives accurate citations.
+
+### 3. Embedding Generation
+Each text chunk is sent to the Google Gen AI API using the `gemini-embedding-2` model to generate high-quality vector embeddings. The dimension is configured to `768` using Matryoshka Representation Learning (MRL), matching the database schema.
+
+### 4. Vector Storage
+The document metadata is saved in the `documents` table, and the chunks along with their vector embeddings, source filename, and page numbers are saved in the `document_chunks` table in Supabase.
+
+### 5. Semantic Search & Retrieval (Cosine Similarity)
+When a user asks a question via `/chat`:
+1. The question is embedded using the same `gemini-embedding-2` model.
+2. The embedding is sent to Supabase using a Remote Procedure Call (RPC) database function called `match_document_chunks`.
+3. This function uses **Cosine Similarity** (`dc.embedding <=> query_embedding`) to find the top $K$ (default: 5) most semantically similar chunks matching the query.
+
+### 6. Grounded Answer Generation
+The retrieved chunks are formatted into a clean context block containing source metadata. This context, along with the user's question, is passed to `gemini-2.5-flash` with a system prompt instructing the model to *only* answer using the provided context and cite the sources using inline tags like `[S1]`, `[S2]`.
+
 
 ## Setup
 
