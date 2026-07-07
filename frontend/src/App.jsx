@@ -12,7 +12,9 @@ import {
   ChevronDown, 
   ChevronUp, 
   BookOpen, 
-  AlertCircle 
+  AlertCircle,
+  Menu,
+  X
 } from 'lucide-react'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -27,6 +29,7 @@ function App() {
   const [apiConnected, setApiConnected] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [visibleSources, setVisibleSources] = useState({}) // maps message index to boolean
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const fileInputRef = useRef(null)
   const messagesEndRef = useRef(null)
@@ -97,6 +100,7 @@ function App() {
         await fetchDocuments()
         // Automatically select the uploaded document
         setSelectedDoc(data)
+        setSidebarOpen(false)
         // Add a system welcome message
         setMessages(prev => [
           ...prev,
@@ -233,13 +237,30 @@ function App() {
 
   return (
     <div className="flex w-screen h-screen bg-brand-bg overflow-hidden font-sans text-gray-100">
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-xs md:hidden animate-[fadeIn_0.2s_ease]"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Section */}
-      <aside className="w-80 bg-brand-sidebar border-r border-white/10 flex flex-col h-full flex-shrink-0">
-        <div className="p-6 flex items-center gap-3 border-b border-white/10">
-          <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-2 rounded-xl flex items-center justify-center shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
-            <Sparkles size={22} color="#ffffff" />
+      <aside className={`fixed inset-y-0 left-0 z-40 w-80 bg-brand-sidebar border-r border-white/10 flex flex-col h-full transition-transform duration-300 transform md:translate-x-0 md:static md:flex-shrink-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 flex items-center justify-between border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-2 rounded-xl flex items-center justify-center shadow-[0_4px_12px_rgba(99,102,241,0.3)]">
+              <Sparkles size={22} color="#ffffff" />
+            </div>
+            <h2 className="text-xl font-semibold tracking-tight bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">DocuMind</h2>
           </div>
-          <h2 className="text-xl font-semibold tracking-tight bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">DocuMind</h2>
+          <button 
+            className="md:hidden text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={() => setSidebarOpen(false)}
+            title="Close sidebar"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Upload Container */}
@@ -276,7 +297,10 @@ function App() {
           <h4 className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1">Knowledge Bases</h4>
           <button 
             className={`flex items-center justify-between p-3 px-4 rounded-xl bg-white/[0.03] border cursor-pointer transition-all duration-200 text-gray-200 font-medium hover:bg-indigo-500/10 hover:border-indigo-500/40 ${selectedDoc === null ? 'bg-indigo-500/10 border-indigo-500/40 text-white' : 'border-white/10'}`}
-            onClick={() => setSelectedDoc(null)}
+            onClick={() => {
+              setSelectedDoc(null)
+              setSidebarOpen(false)
+            }}
           >
             <div className="flex items-center gap-2.5">
               <Database size={16} />
@@ -290,7 +314,10 @@ function App() {
               <div 
                 key={doc.id} 
                 className={`flex items-center justify-between p-3 px-3.5 rounded-xl bg-brand-card border cursor-pointer transition-all duration-200 hover:bg-brand-card-hover hover:-translate-y-[1px] ${selectedDoc?.id === doc.id ? 'border-violet-500/50 bg-violet-500/[0.08] shadow-[0_4px_12px_rgba(139,92,246,0.05)]' : 'border-white/10'}`}
-                onClick={() => setSelectedDoc(doc)}
+                onClick={() => {
+                  setSelectedDoc(doc)
+                  setSidebarOpen(false)
+                }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <FileText size={16} className="text-indigo-300 flex-shrink-0" />
@@ -321,21 +348,28 @@ function App() {
       </aside>
 
       {/* Main Chat Interface */}
-      <main className="flex-1 flex flex-col h-full bg-brand-bg relative">
-        <header className="h-[73px] px-6 border-b border-white/10 flex items-center justify-between bg-brand-sidebar/50 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <Database size={18} className="text-violet-500" />
-            <h3 className="text-base font-semibold text-gray-100">Chatting with</h3>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+      <main className="flex-1 flex flex-col h-full bg-brand-bg relative min-w-0">
+        <header className="h-[73px] px-4 sm:px-6 border-b border-white/10 flex items-center justify-between bg-brand-sidebar/50 backdrop-blur-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <button 
+              className="md:hidden flex items-center justify-center text-gray-400 hover:text-white p-2 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] transition-all cursor-pointer mr-1 flex-shrink-0"
+              onClick={() => setSidebarOpen(true)}
+              title="Open sidebar"
+            >
+              <Menu size={18} />
+            </button>
+            <Database size={18} className="text-violet-500 flex-shrink-0" />
+            <h3 className="text-base font-semibold text-gray-100 flex-shrink-0">Chatting with</h3>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs" title={selectedDoc ? selectedDoc.filename : 'All Knowledge Bases'}>
               {selectedDoc ? selectedDoc.filename : 'All Knowledge Bases'}
             </span>
           </div>
         </header>
 
         {/* Message Thread */}
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
           {messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 p-10 max-w-xl mx-auto">
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 p-4 sm:p-10 max-w-xl mx-auto">
               <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center shadow-[0_10px_30px_rgba(99,102,241,0.3)]">
                 <Bot size={40} color="#ffffff" />
               </div>
@@ -344,7 +378,7 @@ function App() {
                 Upload your research papers, documentations, or PDF guides. Ask questions and get instant, context-aware answers backed by inline citations.
               </p>
               
-              <div className="grid grid-cols-2 gap-4 w-full mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4">
                 <div className="bg-brand-card border border-white/10 p-5 rounded-2xl text-left flex flex-col gap-2">
                   <BookOpen size={20} className="text-violet-500" />
                   <h4 className="text-sm font-semibold text-gray-100">Source Grounding</h4>
@@ -359,7 +393,7 @@ function App() {
             </div>
           ) : (
             messages.map((msg, index) => (
-              <div key={index} className={`flex flex-col gap-2 max-w-[80%] animate-[fadeIn_0.3s_ease] ${msg.sender === 'user' ? 'self-end' : 'self-start'}`}>
+              <div key={index} className={`flex flex-col gap-2 max-w-[90%] sm:max-w-[80%] animate-[fadeIn_0.3s_ease] ${msg.sender === 'user' ? 'self-end' : 'self-start'}`}>
                 <div className={`p-4 px-5 rounded-2xl text-[15px] leading-relaxed ${msg.sender === 'user' ? 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-br-none shadow-[0_4px_15px_rgba(99,102,241,0.2)]' : 'bg-brand-card text-gray-100 rounded-bl-none border border-white/10'} ${msg.system ? 'font-style: italic bg-white/[0.03] text-indigo-300 border border-dashed border-white/10' : ''} ${msg.error ? 'border-l-4 border-red-500 bg-red-500/[0.05]' : ''}`}>
                   {msg.error && <AlertCircle size={16} className="inline mr-1.5 align-middle text-red-500" />}
                   {msg.text}
@@ -378,9 +412,9 @@ function App() {
                       <div className="flex flex-col gap-2.5 mt-2 p-3 bg-black/20 rounded-xl border border-white/10">
                         {msg.sources.map((src, sIdx) => (
                           <div key={sIdx} className="flex flex-col gap-1.5 p-2.5 bg-white/[0.02] rounded-lg border-l-3 border-violet-500">
-                            <div className="flex justify-between text-[11px] font-semibold text-gray-400">
-                              <span>Source [{sIdx + 1}]: {src.filename}</span>
-                              <span>Pages: {src.page_start} - {src.page_end}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-[11px] font-semibold text-gray-400">
+                              <span className="truncate" title={src.filename}>Source [{sIdx + 1}]: {src.filename}</span>
+                              <span className="flex-shrink-0">Pages: {src.page_start} - {src.page_end}</span>
                             </div>
                             <div className="text-xs text-gray-500 italic leading-relaxed whitespace-pre-wrap">"{src.content}"</div>
                           </div>
@@ -395,7 +429,7 @@ function App() {
 
           {/* AI Loader */}
           {loading && (
-            <div className="flex flex-col gap-2 max-w-[80%] self-start">
+            <div className="flex flex-col gap-2 max-w-[90%] sm:max-w-[80%] self-start">
               <div className="flex items-center gap-3 p-4 px-5 rounded-2xl text-[15px] leading-relaxed bg-brand-card text-gray-100 rounded-bl-none border border-white/10">
                 <Bot size={18} className="text-violet-500" />
                 <div className="flex gap-1">
@@ -410,7 +444,7 @@ function App() {
         </div>
 
         {/* Input Bar */}
-        <div className="p-6 bg-brand-bg/85 border-t border-white/10 backdrop-blur-md">
+        <div className="p-4 sm:p-6 bg-brand-bg/85 border-t border-white/10 backdrop-blur-md">
           <form className="relative flex items-center bg-brand-card border border-white/10 rounded-2xl p-1.5 px-3 transition-all duration-200 shadow-lg focus-within:border-indigo-500/50 focus-within:shadow-[0_0_15px_rgba(99,102,241,0.15)]" onSubmit={handleSendMessage}>
             <input 
               className="flex-1 bg-transparent border-none text-gray-100 p-3 py-2 text-sm outline-none placeholder-gray-500"
